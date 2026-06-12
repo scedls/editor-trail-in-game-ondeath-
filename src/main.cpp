@@ -109,58 +109,61 @@ class $modify(ProPlayLayer, PlayLayer) {
 }
 
     void postUpdate(float dt) {
-        PlayLayer::postUpdate(dt);
+    PlayLayer::postUpdate(dt);
 
-        auto f = m_fields.self();
+    auto f = m_fields.self();
 
-        if (g_pointSpacing > 1) {
-            f->m_plap++;
+    if (g_pointSpacing > 1) {
+        f->m_plap++;
 
-            if (f->m_plap < g_pointSpacing) {
-                return;
-            }
-
-            f->m_plap = 0;
-        }
-
-        if (!g_trailEnabled || (!g_modEnabled && !getSetting<"enable-on-death", bool>())) {
+        if (f->m_plap < g_pointSpacing) {
             return;
         }
 
-        if (!f->m_drawNode) {
-            return;
-        }
-
-        f->m_drawNode->setVisible(g_modEnabled || (getSetting<"enable-on-death", bool>() && m_player1->m_isDead));
-
-        if (f->m_previousP1Position.y != 0) {
-            auto color = g_p1TrailColor;
-
-            if (g_holdIndicator && f->m_p1Holding) {
-                darkenColor(color);
-            }
-
-            f->m_drawNode->drawSegment(f->m_previousP1Position, m_player1->getPosition(), g_trailThickness, color);
-        }
-
-        f->m_previousP1Position = m_player1->getPosition();
-
-        if (!m_gameState.m_isDualMode) {
-            return;
-        }
-
-        if (f->m_previousP2Position.y != 0) {
-            auto color = g_p2TrailColor;
-
-            if (g_holdIndicator && f->m_p2Holding) {
-                darkenColor(color);
-            }
-        
-            f->m_drawNode->drawSegment(f->m_previousP2Position, m_player2->getPosition(), g_trailThickness, color);
-        }
-
-        f->m_previousP2Position = m_player2->getPosition();
+        f->m_plap = 0;
     }
+
+    // FIXED - allow recording if either the mod is enabled OR enable-on-death is on
+    if (!g_trailEnabled || (!g_modEnabled && !getSetting<"enable-on-death", bool>())) {
+        return;
+    }
+
+    if (!f->m_drawNode) {
+        return;
+    }
+
+    // FIXED - removed the setVisible call from here entirely
+    // visibility is now only controlled by updateState() and the death check
+    // setting it every frame here was overriding everything
+
+    if (f->m_previousP1Position.y != 0) {
+        auto color = g_p1TrailColor;
+
+        if (g_holdIndicator && f->m_p1Holding) {
+            darkenColor(color);
+        }
+
+        f->m_drawNode->drawSegment(f->m_previousP1Position, m_player1->getPosition(), g_trailThickness, color);
+    }
+
+    f->m_previousP1Position = m_player1->getPosition();
+
+    if (!m_gameState.m_isDualMode) {
+        return;
+    }
+
+    if (f->m_previousP2Position.y != 0) {
+        auto color = g_p2TrailColor;
+
+        if (g_holdIndicator && f->m_p2Holding) {
+            darkenColor(color);
+        }
+    
+        f->m_drawNode->drawSegment(f->m_previousP2Position, m_player2->getPosition(), g_trailThickness, color);
+    }
+
+    f->m_previousP2Position = m_player2->getPosition();
+}
 
     void resetLevel() {
         PlayLayer::resetLevel();
