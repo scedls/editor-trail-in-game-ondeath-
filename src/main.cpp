@@ -74,37 +74,39 @@ class $modify(ProPlayLayer, PlayLayer) {
     };
 
     void updateState() {
-        auto f = m_fields.self();
+    auto f = m_fields.self();
 
-        if (!g_modEnabled && !getSetting<"enable-on-death", bool>()) {
-            setHookEnabled("PlayLayer::postUpdate", false);
-            setHookEnabled("GJBaseGameLayer::handleButton", false);
+    
+    if (!g_modEnabled && !getSetting<"enable-on-death", bool>()) {
+        setHookEnabled("PlayLayer::postUpdate", false);
+        setHookEnabled("GJBaseGameLayer::handleButton", false);
 
-            if (f->m_drawNode) {
-                f->m_drawNode->clear();
-                f->m_drawNode->setVisible(false);
-            }
-
-            f->m_previousP1Position = CCPoint{0, 0};
-            f->m_previousP2Position = CCPoint{0, 0};
-
-            return;
+        if (f->m_drawNode) {
+            f->m_drawNode->clear();
+            f->m_drawNode->setVisible(false);
         }
 
-        setHookEnabled("PlayLayer::postUpdate", g_trailEnabled);
-        setHookEnabled("GJBaseGameLayer::handleButton", true);
-        
-        if (!f->m_drawNode) {
-            f->m_drawNode = CCDrawNode::create();
-            f->m_drawNode->setID("drawy-node"_spr);
-            f->m_drawNode->setBlendFunc({GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA});
-            f->m_drawNode->m_bUseArea = false;
+        f->m_previousP1Position = CCPoint{0, 0};
+        f->m_previousP2Position = CCPoint{0, 0};
 
-            m_objectLayer->addChild(f->m_drawNode, 500);
-        }
-
-        f->m_drawNode->setVisible(true);
+        return;
     }
+
+    setHookEnabled("PlayLayer::postUpdate", g_trailEnabled);
+    setHookEnabled("GJBaseGameLayer::handleButton", true);
+    
+    if (!f->m_drawNode) {
+        f->m_drawNode = CCDrawNode::create();
+        f->m_drawNode->setID("drawy-node"_spr);
+        f->m_drawNode->setBlendFunc({GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA});
+        f->m_drawNode->m_bUseArea = false;
+
+        m_objectLayer->addChild(f->m_drawNode, 500);
+    }
+
+    
+    f->m_drawNode->setVisible(!getSetting<"enable-on-death", bool>());
+}
 
     void postUpdate(float dt) {
         PlayLayer::postUpdate(dt);
