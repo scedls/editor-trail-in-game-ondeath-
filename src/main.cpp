@@ -71,104 +71,122 @@ class $modify(ProPlayLayer, PlayLayer) {
         bool m_p1Holding = false;
         bool m_p2Holding = false;
         int m_plap = 0;
+        bool m_hasDied = false; 
     };
 
     void updateState() {
-    auto f = m_fields.self();
+        auto f = m_fields.self();
 
-    
-    if (!g_modEnabled && !getSetting<"enable-on-death", bool>()) {
-        setHookEnabled("PlayLayer::postUpdate", false);
-        setHookEnabled("GJBaseGameLayer::handleButton", false);
+        if (!g_modEnabled && !getSetting<"enable-on-death", bool>()) {
+            setHookEnabled("PlayLayer::postUpdate", false);
+            setHookEnabled("GJBaseGameLayer::handleButton", false);
 
-        if (f->m_drawNode) {
-            f->m_drawNode->clear();
-            f->m_drawNode->setVisible(false);
-        }
+            if (f->m_drawNode) {
+                f->m_drawNode->clear();
+                f->m_drawNode->setVisible(false);
+            }
 
-        f->m_previousP1Position = CCPoint{0, 0};
-        f->m_previousP2Position = CCPoint{0, 0};
+            f->m_previousP1Position = CCPoint{0, 0};
+            f->m_previousP2Position = CCPoint{0, 0};
 
-        return;
-    }
-
-    setHookEnabled("PlayLayer::postUpdate", g_trailEnabled);
-    setHookEnabled("GJBaseGameLayer::handleButton", true);
-    
-    if (!f->m_drawNode) {
-        f->m_drawNode = CCDrawNode::create();
-        f->m_drawNode->setID("drawy-node"_spr);
-        f->m_drawNode->setBlendFunc({GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA});
-        f->m_drawNode->m_bUseArea = false;
-
-        m_objectLayer->addChild(f->m_drawNode, 500);
-    }
-
-    
-    f->m_drawNode->setVisible(!getSetting<"enable-on-death", bool>());
-}
-
-    void postUpdate(float dt) {
-    PlayLayer::postUpdate(dt);
-
-    auto f = m_fields.self();
-
-    if (g_pointSpacing > 1) {
-        f->m_plap++;
-
-        if (f->m_plap < g_pointSpacing) {
             return;
         }
 
-        f->m_plap = 0;
-    }
+        
+        setHookEnabled("PlayLayer::postUpdate", g_trailEnabled);
+        setHookEnabled("GJBaseGameLayer::handleButton", true);
+        
+        if (!f->m_drawNode) {
+            f->m_drawNode = CCDrawNode::create();
+            f->m_drawNode->setID("drawy-node"_spr);
+            f->m_drawNode->setBlendFunc({GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA});
+            f->m_drawNode->m_bUseArea = false;
 
-    // FIXED - allow recording if either the mod is enabled OR enable-on-death is on
-    if (!g_trailEnabled || (!g_modEnabled && !getSetting<"enable-on-death", bool>())) {
-        return;
-    }
-
-    if (!f->m_drawNode) {
-        return;
-    }
-
-    // FIXED - removed the setVisible call from here entirely
-    // visibility is now only controlled by updateState() and the death check
-    // setting it every frame here was overriding everything
-
-    if (f->m_previousP1Position.y != 0) {
-        auto color = g_p1TrailColor;
-
-        if (g_holdIndicator && f->m_p1Holding) {
-            darkenColor(color);
+            m_objectLayer->addChild(f->m_drawNode, 500);
         }
 
-        f->m_drawNode->drawSegment(f->m_previousP1Position, m_player1->getPosition(), g_trailThickness, color);
-    }
-
-    f->m_previousP1Position = m_player1->getPosition();
-
-    if (!m_gameState.m_isDualMode) {
-        return;
-    }
-
-    if (f->m_previousP2Position.y != 0) {
-        auto color = g_p2TrailColor;
-
-        if (g_holdIndicator && f->m_p2Holding) {
-            darkenColor(color);
+        
+        if (getSetting<"enable-on-death", bool>()) {
+            f->m_drawNode->setVisible(false);
+        } else {
+            f->m_drawNode->setVisible(g_modEnabled);
         }
+    }
+
+    void postUpdate(float dt) {
+        PlayLayer::postUpdate(dt);
+
+        auto f = m_fields.self();
+
+        if (g_pointSpacing > 1) {
+            f->m_plap++;
+
+            if (f->m_plap < g_pointSpacing) {
+                return;
+            }
+
+            f->m_plap = 0;
+        }
+
+        
+        if (!g_trailEnabled || (!g_modEnabled && !getSetting<"enable-on-death", bool>())) {
+            return;
+        }
+
+        if (!f->m_drawNode) {
+            return;
+        }
+
+        
+
+        if (f->m_previousP1Position.y != 0) {
+            auto color = g_p1TrailColor;
+
+            if (g_holdIndicator && f->m_p1Holding) {
+                darkenColor(color);
+            }
+
+            f->m_drawNode->drawSegment(f->m_previousP1Position, m_player1->getPosition(), g_trailThickness, color);
+        }
+
+        f->m_previousP1Position = m_player1->getPosition();
+
+        if (!m_gameState.m_isDualMode) {
+            return;
+        }
+
+        if (f->m_previousP2Position.y != 0) {
+            auto color = g_p2TrailColor;
+
+            if (g_holdIndicator && f->m_p2Holding) {
+                darkenColor(color);
+            }
+        
+            f->m_drawNode->drawSegment(f->m_previousP2Position, m_player2->getPosition(), g_trailThickness, color);
+        }
+
+        f->m_previousP2Position = m_player2->getPosition();
+    }
+
     
-        f->m_drawNode->drawSegment(f->m_previousP2Position, m_player2->getPosition(), g_trailThickness, color);
-    }
+    void destroyPlayer(PlayerObject* player, GameObject* object) {
+        PlayLayer::destroyPlayer(player, object);
 
-    f->m_previousP2Position = m_player2->getPosition();
-}
+        auto f = m_fields.self();
+
+        if (getSetting<"enable-on-death", bool>() && f->m_drawNode && !f->m_hasDied) {
+            f->m_hasDied = true;
+            f->m_drawNode->setVisible(true);
+        }
+    }
 
     void resetLevel() {
         PlayLayer::resetLevel();
 
         auto f = m_fields.self();
+
+        
+        f->m_hasDied = false;
 
         if (f->m_drawNode) {
             f->m_drawNode->clear();
@@ -176,6 +194,10 @@ class $modify(ProPlayLayer, PlayLayer) {
             f->m_previousP2Position.y = 0;
             f->m_p1Holding = false;
             f->m_p2Holding = false;
+            
+            if (getSetting<"enable-on-death", bool>()) {
+                f->m_drawNode->setVisible(false);
+            }
         }
     }
 
